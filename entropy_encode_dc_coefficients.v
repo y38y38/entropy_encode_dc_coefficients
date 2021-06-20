@@ -128,9 +128,10 @@ always @(posedge clk, negedge reset_n) begin
 			//uint32_t value = (last_rice_q + 1) << k_rice;
 			if (val < 8) begin
 				is_expo_golomb_code <= 1'b0;
+				is_add_setbit <= 1'b0;
 				k <= 2;
 				val_n <= val;
-			end begin
+			end else begin
 				is_expo_golomb_code <= 1'b1;
 		        //setBit(bitstream, 0,last_rice_q + 1);
 				is_add_setbit <= 1'b1;
@@ -216,7 +217,7 @@ always @(posedge clk, negedge reset_n) begin
 		codeword_length = 32'h0;
 	end else begin
 		if (is_expo_golomb_code == 1'b0) begin
-			q = val >> k;
+			q = val_n >> k;
 			if (k==0) begin
 				if(q!=0) begin
 					sum = 1;
