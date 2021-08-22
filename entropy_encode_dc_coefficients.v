@@ -14,7 +14,13 @@ output reg [19:0] previousDCCoeff,
 output reg [19:0] previousDCDiff, 
 output reg [19:0] dc_coeff_difference, 
 output reg [19:0] val,
-output reg [19:0] val_n
+output reg [19:0] val_n,
+output reg is_expo_golomb_code,
+output reg is_add_setbit,
+output reg [2:0] k,
+output reg first_diff,
+output reg [31:0] q
+
 
 );
 
@@ -96,9 +102,6 @@ end
 
 
 //dicision talbe
-reg is_expo_golomb_code;
-reg is_add_setbit;
-reg [2:0] k;
 
 always @(posedge clk, negedge reset_n) begin
 	if (!reset_n) begin
@@ -160,6 +163,7 @@ always @(posedge clk, negedge reset_n) begin
 		abs_previousDCDiff_next <= 20'h0;
 		dc_coeff_difference <= 20'h0;
 		val <= 20'h0;
+		first_diff <= 1'b1;
 
 	end else begin
 		if (previousDCDiff[19] == 1'b0) begin
@@ -176,7 +180,12 @@ always @(posedge clk, negedge reset_n) begin
 //		val <= Signedintegertosymbolmapping(dc_coeff_difference);
 		abs_previousDCDiff <= getabs(previousDCDiff);
 		abs_previousDCDiff_next <= abs_previousDCDiff;
-		previousDCDiff <= DcCoeff - previousDCCoeff;
+		if (first_diff) begin
+			previousDCDiff <= 3;
+			first_diff <= 0;
+		end else begin
+			previousDCDiff <= DcCoeff - previousDCCoeff;
+		end
 		previousDCCoeff <= DcCoeff;
 	end
 
@@ -185,7 +194,6 @@ end
 assign LENGTH = codeword_length;
 
 
-reg [31:0] q = 32'h0;
 reg [31:0] codeword_length = 32'h0;
 
 //exp_golomb_code
@@ -199,7 +207,7 @@ always @(posedge clk, negedge reset_n) begin
 			//q =  input_data + 16'h1;
 			sum[19:0] = val_n + (1<<k);
 			if (is_add_setbit == 1'b1) begin
-				codeword_length = (2 * q) + k + 4;
+				codeword_length = (2 * q) + k + 3;
 			end else begin
 				codeword_length = (2 * q) + k + 1;
 			end

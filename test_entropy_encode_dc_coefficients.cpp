@@ -2,42 +2,28 @@
 #include <iostream>
 #include <verilated.h>
 #include "Ventropy_encode_dc_coefficients.h"
-#include <verilated_fst_c.h> 
+//#include <verilated_fst_c.h> 
 
 
 
-int16_t vals[] = {288,
- 307 ,
- 333,
-  360, 
-  287 ,
-  317 ,
-  361,
-   356,
-    364, 
-	367 ,
-	323 ,
-	335 ,
-	376,
-	 392, 
-	 329 ,
-	 352,
-	  352,
-	   365,
-	    384,
-		 367,
-		  340,
-		   422,
-		    317,
-			 403,
-			  424,
-			   427,
-			    418,
-				 424,
-				  416,
-				   406,
-				    427,
-					 417, 
+int16_t vals[] = {
+-179,
+-191,
+-181,
+-179,
+-194,
+-179,
+-193,
+-173,
+-187,
+-182,
+-199,
+-183,
+-203,
+-194,
+-201,
+-195,
+
 
 };
 #define MAX_COEFFICIENT_NUM_PER_BLOCK (64)
@@ -49,10 +35,12 @@ static void golomb_rice_code(int32_t k, uint32_t val)
     if (k ==0) {
         if (q != 0) {
 //            setBit(bitstream, 0,q);
-		printf("%x %d\n", 0, q);
-        }
-//        setBit(bitstream, 1,1);
+		printf("%x %d\n", 1, q+1);
+        } else {
 		printf("%x %d\n", 1, 1);
+
+		}
+//        setBit(bitstream, 1,1);
     } else {
         uint32_t tmp = (k==0) ? 1 : (2<<(k-1));
         uint32_t r = val & (tmp -1 );
@@ -64,18 +52,21 @@ static void golomb_rice_code(int32_t k, uint32_t val)
     }
     return;
 }
-static void exp_golomb_code(int32_t k, uint32_t val)
+static void exp_golomb_code(int32_t k, uint32_t val, int add_bit)
 {
 
 	//LOG
     int32_t q = floor(log2(val + ((k==0) ? 1 : (2<<(k-1))))) - k;
-
+	//printf("q= %d\n",q);
+	//printf("k= %d\n",k);
+	//printf("val= %d\n",val);
+	//printf("add_bit= %d\n",add_bit);
     uint32_t sum = val + ((k==0) ? 1 : (2<<(k-1)));
 
     int32_t codeword_length = (2 * q) + k + 1;
 
 //    setBit(bitstream, sum, codeword_length);
-		printf("%x %d\n", sum, codeword_length);
+		printf("%x %d\n", sum, codeword_length+add_bit);
     return;
 }
 static void rice_exp_combo_code(int32_t last_rice_q, int32_t k_rice, int32_t k_exp, uint32_t val)
@@ -85,24 +76,24 @@ static void rice_exp_combo_code(int32_t last_rice_q, int32_t k_rice, int32_t k_e
     if (val < value) {
         golomb_rice_code(k_rice, val);
     } else {
-		printf("%x %d\n", 0, last_rice_q + 1);
+//		printf("%x %d\n", 0, last_rice_q + 1);
 //        setBit(bitstream, 0,last_rice_q + 1);
-        exp_golomb_code(k_exp, val - value);
+        exp_golomb_code(k_exp, val - value, last_rice_q + 1);
     }
     return;
 }
 static void entropy_encode_dc_coefficient(bool first, int32_t abs_previousDCDiff , int val)
 {
     if (first) {
-        exp_golomb_code(5, val);
+        exp_golomb_code(5, val,0);
     } else if (abs_previousDCDiff == 0) {
-        exp_golomb_code(0, val);
+        exp_golomb_code(0, val,0);
     } else if (abs_previousDCDiff == 1) {
-        exp_golomb_code(1, val);
+        exp_golomb_code(1, val,0);
     } else if (abs_previousDCDiff == 2) {
         rice_exp_combo_code(1,2,3, val);
     } else {
-        exp_golomb_code(3, val);
+        exp_golomb_code(3, val,0);
     }
     return;
 
@@ -154,11 +145,20 @@ void entropy_encode_dc_coefficients(int16_t*coefficients)
     while( n <numBlocks) {
         DcCoeff = (coefficients[n++]); 
         dc_coeff_difference = DcCoeff - previousDCCoeff;
+		//printf("DcCoeff=%d\n", DcCoeff);
+		//printf("previousDCCoeff=%d\n", previousDCCoeff);
+		//printf("b dc_coeff_difference=%d\n", dc_coeff_difference);
+		//printf("previousDCDiff=%d\n", previousDCDiff);
         if (previousDCDiff < 0) {
             dc_coeff_difference *= -1;
         }
+		//printf("a dc_coeff_difference=%d\n", dc_coeff_difference);
         val = Signedintegertosymbolmapping(dc_coeff_difference);
+		//printf("previousDCDiff=%d\n",previousDCDiff);
         abs_previousDCDiff = GetAbs(previousDCDiff );
+		//printf("abs_previousDCDiff=%d\n",abs_previousDCDiff);
+		//printf("val=%d\n",val);
+		
         entropy_encode_dc_coefficient(false, abs_previousDCDiff, val);
         previousDCDiff = DcCoeff - previousDCCoeff;
         previousDCCoeff= DcCoeff;
@@ -184,10 +184,10 @@ int main(int argc, char** argv) {
 	Ventropy_encode_dc_coefficients *dut = new Ventropy_encode_dc_coefficients();
 	// Trace DUMP ON
 	Verilated::traceEverOn(true);
-	VerilatedFstC* tfp = new VerilatedFstC;
+//	VerilatedFstC* tfp = new VerilatedFstC;
 
-	dut->trace(tfp, 100);  // Trace 100 levels of hierarchy
-	tfp->open("simx.fst");
+//	dut->trace(tfp, 100);  // Trace 100 levels of hierarchy
+//	tfp->open("simx.fst");
 
 	// Format
 	dut->reset_n = 0;
@@ -197,7 +197,7 @@ int main(int argc, char** argv) {
 	while (time_counter < 10) {
 		dut->clk = !dut->clk; // Toggle clock
 		dut->eval();
-		tfp->dump(time_counter);  // 波形ダンプ用の記述を追加
+	//	tfp->dump(time_counter);  // 波形ダンプ用の記述を追加
 		time_counter++;
 	}
 	// Release reset
@@ -232,7 +232,7 @@ printf("\n\n");
 //					printf("end\n");
 //					break;
 //				}
-				dut->DcCoeff = vals[i];
+				dut->DcCoeff = vals[i%16];
 				i++;
 //				state = 1;
 //			}
@@ -246,6 +246,10 @@ printf("\n\n");
 			printf("val %d\n", dut->val);
 			printf("val_n %d\n", dut->val_n);
 			printf("DcCoeff %d %d\n", dut->DcCoeff, i);
+			printf("is_expo_golomb_code %d\n", dut->is_expo_golomb_code);
+			printf("k %d\n", dut->k);
+			printf("is_add_setbit %d\n", dut->is_add_setbit);
+			printf("q %d\n", dut->q);
 #endif
 		}
 
@@ -263,11 +267,11 @@ printf("\n\n");
 
 //			}
 		}
-		tfp->dump(time_counter);  // 波形ダンプ用の記述を追加
+		//tfp->dump(time_counter);  // 波形ダンプ用の記述を追加
 		time_counter++;
 //		break;
 	}
 
 	dut->final();
-	tfp->close(); 
+	//tfp->close(); 
 }
