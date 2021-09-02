@@ -355,7 +355,8 @@ printf("\n\n");
 			printf("sum_n %x\n", dut->sum_n);
 			printf("---------------------------\n", dut->sum_n);
 #endif
-			printf("%x %d\n", dut->sum_n, dut->LENGTH);
+			printf("%x %d\n", dut->sum_n_n, dut->codeword_length_n);
+//			printf("%x %d\n", dut->sum_n, dut->LENGTH);
 		}
 
 		// Evaluate DUT

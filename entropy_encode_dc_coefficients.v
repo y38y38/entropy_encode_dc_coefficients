@@ -12,6 +12,8 @@ output reg [31:0] previousDCDiff,
 	output reg [31:0] sum,
 	output reg [31:0] sum_n,
 	output wire [31:0] LENGTH,
+output reg [31:0] sum_n_n,
+
 	output reg [31:0] pppp,
 output reg [31:0] abs_previousDCDiff,
 output reg [31:0] abs_previousDCDiff_next, 
@@ -23,6 +25,7 @@ output reg [31:0] val_n,
 
 output reg [1:0] is_expo_golomb_code,
 output reg [1:0] is_expo_golomb_code_n,
+output reg [1:0] is_expo_golomb_code_n_n,
 
 
 output reg is_add_setbit,
@@ -32,8 +35,11 @@ output reg [2:0] k,
 output reg [2:0] k_n,
 output reg [31:0] q = 32'h0,
 output reg [31:0] codeword_length = 32'h0,
+output reg [31:0] codeword_length_n,
+
 
 output reg first_diff
+
 
 
 );
@@ -209,56 +215,6 @@ end
 
 assign LENGTH = codeword_length;
 
-
-
-//log2
-//			q = getfloorclog2((val_n + (1<<(k)))) - k;
-
-always @(posedge clk, negedge reset_n) begin
-	if(!reset_n) begin
-		q <= 32'h0;
-	end else begin
-		if (is_expo_golomb_code == 2'b01) begin
-
-			casex(val_n + (1<<(k)))
-				32'b1xxx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx: q <= 32'h00_001f - k;
-				32'b01xx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx: q <= 32'h00_001e - k;
-				32'b001x_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx: q <= 32'h00_001d - k;
-				32'b0001_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx: q <= 32'h00_001c - k;
-				32'b0000_1xxx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx: q <= 32'h00_001b - k;
-				32'b0000_01xx_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx: q <= 32'h00_001a - k;
-				32'b0000_001x_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx: q <= 32'h00_0019 - k;
-				32'b0000_0001_xxxx_xxxx_xxxx_xxxx_xxxx_xxxx: q <= 32'h00_0018 - k;
-				32'b0000_0000_1xxx_xxxx_xxxx_xxxx_xxxx_xxxx: q <= 32'h00_0017 - k;
-				32'b0000_0000_01xx_xxxx_xxxx_xxxx_xxxx_xxxx: q <= 32'h00_0016 - k;
-				32'b0000_0000_001x_xxxx_xxxx_xxxx_xxxx_xxxx: q <= 32'h00_0015 - k;
-				32'b0000_0000_0001_xxxx_xxxx_xxxx_xxxx_xxxx: q <= 32'h00_0014 - k;
-				32'b0000_0000_0000_1xxx_xxxx_xxxx_xxxx_xxxx: q <= 32'h00_0013 - k;
-				32'b0000_0000_0000_01xx_xxxx_xxxx_xxxx_xxxx: q <= 32'h00_0012 - k;
-				32'b0000_0000_0000_001x_xxxx_xxxx_xxxx_xxxx: q <= 32'h00_0011 - k;
-				32'b0000_0000_0000_0001_xxxx_xxxx_xxxx_xxxx: q <= 32'h00_0010 - k;
-				32'b0000_0000_0000_0000_1xxx_xxxx_xxxx_xxxx: q <= 32'h00_000f - k;
-				32'b0000_0000_0000_0000_01xx_xxxx_xxxx_xxxx: q <= 32'h00_000e - k;
-				32'b0000_0000_0000_0000_001x_xxxx_xxxx_xxxx: q <= 32'h00_000d - k;
-				32'b0000_0000_0000_0000_0001_xxxx_xxxx_xxxx: q <= 32'h00_000c - k;
-				32'b0000_0000_0000_0000_0000_1xxx_xxxx_xxxx: q <= 32'h00_000b - k;
-				32'b0000_0000_0000_0000_0000_01xx_xxxx_xxxx: q <= 32'h00_000a - k;
-				32'b0000_0000_0000_0000_0000_001x_xxxx_xxxx: q <= 32'h00_0009 - k;
-				32'b0000_0000_0000_0000_0000_0001_xxxx_xxxx: q <= 32'h00_0008 - k;
-				32'b0000_0000_0000_0000_0000_0000_1xxx_xxxx: q <= 32'h00_0007 - k;
-				32'b0000_0000_0000_0000_0000_0000_01xx_xxxx: q <= 32'h00_0006 - k;
-				32'b0000_0000_0000_0000_0000_0000_001x_xxxx: q <= 32'h00_0005 - k;
-				32'b0000_0000_0000_0000_0000_0000_0001_xxxx: q <= 32'h00_0004 - k;
-				32'b0000_0000_0000_0000_0000_0000_0000_1xxx: q <= 32'h00_0003 - k;
-				32'b0000_0000_0000_0000_0000_0000_0000_01xx: q <= 32'h00_0002 - k;
-				32'b0000_0000_0000_0000_0000_0000_0000_001x: q <= 32'h00_0001 - k;
-				32'b0000_0000_0000_0000_0000_0000_0000_0001: q <= 32'h00_0000 - k;
-				32'b0000_0000_0000_0000_0000_0000_0000_0000: q <= 32'h00_0000 - k;
-			endcase
-		end
-	end
-end
-
 always @(posedge clk, negedge reset_n) begin
 	if (!reset_n) begin
 		previousDCDiff <= 32'hffff; 
@@ -269,99 +225,63 @@ end
 
 
 
+wire [31:0] exp_golomb_sum;
+wire [31:0] exp_golomb_codeword_length;
+
+exp_golomb_code exp_golomb_code_inst(
+	.reset_n(reset_n),
+	.clk(clk),
+	.val(val_n),
+	.is_add_setbit(is_add_setbit),
+	.k(k),
+	.sum_n(exp_golomb_sum),
+	.codeword_length(exp_golomb_codeword_length)
+);
+
+
+wire [31:0] rice_sum;
+wire [31:0] rice_codeword_length;
+
+golomb_rice_code golomb_rice_code_inst(
+	.reset_n(reset_n),
+	.clk(clk),
+	.k(k),
+	.val(val_n),
+	.sum_n(rice_sum),
+	.codeword_length(rice_codeword_length),
+	.k_n(k_n),
+	.sum(sum)
+);
+
 always @(posedge clk, negedge reset_n) begin
 	if (!reset_n) begin
-		k_n <= 3'h0;
+		is_expo_golomb_code_n_n <= 2'b00;
 	end else begin
-		k_n <= k;	
+		is_expo_golomb_code_n_n <= is_expo_golomb_code_n;
 	end
 end
 
 always @(posedge clk, negedge reset_n) begin
 	if (!reset_n) begin
-		is_add_setbit_n <= 1'b0;
+		sum_n_n <= 32'h0;
+		codeword_length_n <= 32'h0;
 	end else begin
-		is_add_setbit_n <= is_add_setbit;	
-	end
-end
-
-always @(posedge clk, negedge reset_n) begin
-	if (!reset_n) begin
-		sum_n <= 32'h0;
-	end else begin
-		sum_n <= sum;	
-	end
-end
-
-//exp_golomb_code
-always @(posedge clk, negedge reset_n) begin
-	if (!reset_n) begin
-	end else begin
-		if (is_expo_golomb_code == 2'b01) begin
-			sum <= val_n + (1<<k);
+		if (is_expo_golomb_code_n_n == 2'b00) begin
+			sum_n_n <= rice_sum;
+			codeword_length_n <= rice_codeword_length;
+//			sum_n_n <= sum_n;
+//			codeword_length_n <= codeword_length;
+		end else if (is_expo_golomb_code_n_n == 2'b01) begin
+			sum_n_n <= exp_golomb_sum;
+			codeword_length_n <= exp_golomb_codeword_length;
+//			sum_n_n <= sum_n;
+//			codeword_length_n <= codeword_length;
+		end else if (is_expo_golomb_code_n_n == 2'b10) begin
+			sum_n_n <= sum_n;
+			codeword_length_n <= codeword_length;
 		end
 	end
 end
-always @(posedge clk, negedge reset_n) begin
-	if (!reset_n) begin
-	end else begin
-		if (is_expo_golomb_code_n == 2'b01) begin
-			if (is_add_setbit_n == 1'b1) begin
-				codeword_length <= (2 * q) + k_n + 3;
-			end else begin
-				codeword_length <= (2 * q) + k_n + 1;
-			end
-		end
-	end
-end
-
-
-
-
-
-//golomb_rice_code
-always @(posedge clk, negedge reset_n) begin
-	if (!reset_n) begin
-//		output_enable = 24'h0;
-		sum <= 32'h0;
-		codeword_length <= 32'h0;
-	end else begin
-//		sum = 24'haaaa;
-		if (is_expo_golomb_code == 2'b00) begin
-			q <= val_n >> k;
-			if (k != 0) begin
-				// 0x4 | 1 & 0x3
-				// 0x5 
-				sum <= (1<<k) | (val_n & ((1<<k) - 1));
-			end
-		end
-	end
-end
-always @(posedge clk, negedge reset_n) begin
-	if (!reset_n) begin
-//		output_enable = 24'h0;
-		sum <= 32'h0;
-		codeword_length <= 32'h0;
-	end else begin
-		if (is_expo_golomb_code_n == 2'b00) begin
-			if (k_n==0) begin
-				if(q!=0) begin
-					sum_n <= 1;
-					codeword_length <= q + 1;
-//					output_enable = bitmask(codeword_length);
-				end else begin
-					sum_n <= 1;
-					codeword_length <= 1;
-//					output_enable = 1;
-				end
-			end else begin
-				codeword_length <= q + 1 + k_n;
-			end
-		end
-	end
-end
-
-
 
 
 
