@@ -28,8 +28,8 @@ output reg [1:0] is_expo_golomb_code_n,
 output reg [1:0] is_expo_golomb_code_n_n,
 
 
-output reg is_add_setbit,
-output reg is_add_setbit_n,
+output reg [1:0] is_add_setbit,
+output reg [1:0] is_add_setbit_n,
 
 output reg [2:0] k,
 output reg [2:0] k_n,
@@ -156,44 +156,44 @@ end
 always @(posedge clk, negedge reset_n) begin
 	if (!reset_n) begin
 		is_expo_golomb_code <= 2'b10;
-		is_add_setbit <= 1'b0;
+		is_add_setbit <= 2'b0;
 		k <= 3'h0;
 		val_n <= 32'h0;
 
 	end else begin
 		if (first_n_n == 1'b1) begin
 			is_expo_golomb_code <= 2'b01;
-			is_add_setbit <= 1'b0;
+			is_add_setbit <= 2'b0;
 			k <= 5;
 			val_n <= val;
 		end else if (abs_previousDCDiff_next == 0) begin
 			is_expo_golomb_code <= 2'b01;
-			is_add_setbit <= 1'b0;
+			is_add_setbit <= 2'b0;
 			k <= 0;
 			val_n <= val;
 		end else if (abs_previousDCDiff_next == 1) begin
 			is_expo_golomb_code <= 2'b01;
-			is_add_setbit <= 1'b0;
+			is_add_setbit <= 2'b0;
 			k <= 1;
 			val_n <= val;
 		end else if (abs_previousDCDiff_next== 2) begin
 			//uint32_t value = (last_rice_q + 1) << k_rice;
 			if (val < 8) begin
 				is_expo_golomb_code <= 2'b00;
-				is_add_setbit <= 1'b0;
+				is_add_setbit <= 2'b0;
 				k <= 2;
 				val_n <= val;
 			end else begin
 				is_expo_golomb_code <= 2'b01;
 		        //setBit(bitstream, 0,last_rice_q + 1);
-				is_add_setbit <= 1'b1;
+				is_add_setbit <= 2'b10;
 				k <= 3;
 				val_n <= val -8;
 			end
 			
 		end else begin
 			is_expo_golomb_code <= 2'b01;
-			is_add_setbit <= 1'b0;
+			is_add_setbit <= 2'b0;
 			k <= 3;
 			val_n <= val;
 		end
@@ -234,6 +234,8 @@ exp_golomb_code exp_golomb_code_inst(
 	.val(val_n),
 	.is_add_setbit(is_add_setbit),
 	.k(k),
+	.is_ac_level(0),
+	.is_ac_minus_n(0),
 	.sum_n(exp_golomb_sum),
 	.codeword_length(exp_golomb_codeword_length)
 );
@@ -247,6 +249,8 @@ golomb_rice_code golomb_rice_code_inst(
 	.clk(clk),
 	.k(k),
 	.val(val_n),
+	.is_ac_level(0),
+	.is_minus_n(0),
 	.sum_n(rice_sum),
 	.codeword_length(rice_codeword_length),
 	.k_n(k_n),

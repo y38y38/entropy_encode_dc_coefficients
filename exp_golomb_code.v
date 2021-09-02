@@ -2,15 +2,17 @@ module exp_golomb_code(
 	input reset_n,
 	input clk,
 	input [31:0] val,
-	input is_add_setbit,
+	input [1:0] is_add_setbit,
 	input [2:0]k,
+	input is_ac_level,
+	input is_ac_minus_n,
 	output reg [31:0] sum_n,
 	output reg [31:0] codeword_length,
 
 	//deubg
 	output reg [31:0] sum,
 	output reg [31:0] q,
-	output reg  is_add_setbit_n,
+	output reg  [1:0] is_add_setbit_n,
 	output reg [2:0] k_n
 
 );
@@ -21,7 +23,7 @@ always @(posedge clk, negedge reset_n) begin
 	if (!reset_n) begin
 		k_n <= 3'h0;
 		sum_n <= 32'h0;
-		is_add_setbit_n <= 1'h0;
+		is_add_setbit_n <= 2'h0;
 	end else begin
 		k_n <= k;
 		sum_n <= sum;
@@ -34,7 +36,16 @@ end
 always @(posedge clk, negedge reset_n) begin
 	if (!reset_n) begin
 	end else begin
-		sum <= val + (1<<k);
+		if (is_ac_level) begin
+			if (is_ac_minus_n) begin
+				sum <= (val + (1<<k))<<1|1;
+			end else begin
+				sum <= (val + (1<<k))<<1|0;
+			end
+			
+		end else begin
+			sum <= (val + (1<<k));
+		end
 	end
 end
 
@@ -87,11 +98,15 @@ end
 always @(posedge clk, negedge reset_n) begin
 	if (!reset_n) begin
 	end else begin
-		if (is_add_setbit_n == 1'b1) begin
-			codeword_length <= (2 * q) + k_n + 3;
+//		if (is_add_setbit_n == 1'b1) begin
+//			codeword_length <= (2 * q) + k_n + 3;
+//		end else begin
+		if (is_ac_level) begin
+			codeword_length <= (2 * q) + k_n + 2 + is_add_setbit_n;
 		end else begin
-			codeword_length <= (2 * q) + k_n + 1;
+			codeword_length <= (2 * q) + k_n + 1 + is_add_setbit_n;
 		end
+//		end
 	end
 end
 
